@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
+Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 */
 package cmd
 
@@ -11,8 +11,8 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "kettle",
-	Short: "kettle container runtime",
+	Use:   "cmd",
+	Short: "CLI to interact with Kettle container runtime",
 	Long: `
   _  _______ _____ _____ _     _____
  | |/ / ____|_   _|_   _| |   | ____|
@@ -20,8 +20,7 @@ var rootCmd = &cobra.Command{
  | . \| |___  | |   | | | |___| |___
  |_|\_\_____| |_|   |_| |_____|_____|
 
-A container runtime similar to containerd.
-`,
+A container runtime similar to containerd.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -41,7 +40,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kettle.yaml)")
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cmd.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
