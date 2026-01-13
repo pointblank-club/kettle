@@ -8,19 +8,41 @@ Kettle is a minimal wacky container runtime engine written to mimic a containerd
 The project mainly comprises of three components:
 - Kettle-Shim
 - KCTL
-- Kettle (GRPC server)
-KCTL talks to Kettle grpc server which in turn creates runc container along with it's shim process
-To start this container we contact the shim server.
+- Kettle (GRPC server) \
+\
+KCTL talks to Kettle grpc server which in turn creates runc rootfs container along with it's shim process. To start this container we contact the shim server.
 These three components are available in ./cmd folder. API proto buf can be found in the same folder.
 
-First start the kettle grpc server
-```
+First start the kettle grpc server.
+```bash
 sudo ./cmd/kettle/kettle
 ```
-Now use Kctl to specify the runc bundle path along with container-id (`test-container` for example)
+Now use Kctl to specify the runc bundle path along with container-id (`sample-container` for example).
+```bash
+sudo ./kctl create --bundle ~/projects/kettle/cmd/kctl/sample-container --id sample-container
 ```
-sudo ./kctl create --bundle ~/projects/kettle/cmd/kctl/sample-container --id test-container
+You should see something like this under kettle server after executing the create command with kctl.
+```bash
+[user@nixos kettle]$ sudo ./kettle
+[sudo] password for user:
+starting server
+gRPC server started on /run/kettle/kettle.sock
+function create called on grpc
+function create called on grpc
+Default runc spec created at: /home/user/kettle/cmd/kctl/sample-container/config.json
+ERRO[0000] runc create failed: cannot allocate tty if runc will detach without setting console socket
+function create called on gRPC
 ```
+And something like this under kctl:
+```bash
+[user@nixos kctl]$ sudo ./kctl create --bundle ~/kettle/cmd/kctl/sample-container --id sample-container
+create called
+Raw socket connects but might be stale
+gRPC connected successfully
+<nil>
+```
+You have now created a runc container through grpc! This eventually needs to be automated through lifecycle management.
+
 ## Development instructions:
 Make sure to have runc installed on your system. The given project has only been tested for linux as of now.
 Run Makefile to generate protobuf for grpc and ttrpc servers.
