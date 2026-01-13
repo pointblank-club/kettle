@@ -1,4 +1,4 @@
-# kettle
+# Kettle
 Kettle is a minimal container runtime engine designed to emulate a containerd-like architecture for performing fundamental container lifecycle operations. At its current stage, the project does not introduce custom runtime behavior; instead, its primary objective is to develop a deep, first-principles understanding of how modern container runtimes are built and operate.
 
 To that end, Kettle intentionally avoids using containerd’s high-level abstractions or convenience APIs. While foundational components such as libcontainer, runc, and other low-level building blocks from the container ecosystem are leveraged where necessary, the long-term goal is to progressively reimplement and replace these dependencies to gain complete control and insight into the runtime stack.
