@@ -25,7 +25,7 @@ func runShim(id string) (pid uint32, err error) {
 
 // used by kettle shim to initialize itself
 func StartShim(id string) (pid uint32, err error) {
-	CreateTTRPCServer(context.TODO(), "/run/kettle/containers/+"+id+"/"+id+"ttrpc.sock")
+	CreateTTRPCServer(context.TODO(), "/run/kettle/containers/"+id+"/"+id+"-ttrpc.sock")
 	return pid, nil
 }
 func (s TaskServiceImpl) Start(ctx context.Context, req *task.StartRequest) (*task.StartResponse, error) {
