@@ -22,6 +22,7 @@ Now use Kctl to specify the runc bundle path along with container-id (`test-cont
 sudo ./kctl create --bundle ~/projects/kettle/cmd/kctl/sample-container --id test-container
 ```
 ## Development instructions:
+Make sure to have runc installed on your system. The given project has only been tested for linux as of now.
 Run Makefile to generate protobuf for grpc and ttrpc servers.
 ```
 make generate-proto
