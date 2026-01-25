@@ -20,3 +20,13 @@ Relevant details, steps, or context.
 ## Additional Context
 Links, references, logs, or screenshots (if any).
 
+## Steps to Reproduce
+Steps / commands that lead to this issue. (How the bug was triggered)
+
+## Environment
+<!--
+For example: Bug might happen only on Windows but work fine on Mac.
+    - OS: Windows 10
+    - Go version: 1.21
+-->
+
