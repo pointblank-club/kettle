@@ -25,8 +25,9 @@ Steps / commands that lead to this issue. (How the bug was triggered)
 
 ## Environment
 <!--
-For example: Bug might happen only on Windows but work fine on Mac.
-    - OS: Windows 10
+Specify the environment used to produce the bug
+    - Arch: x86
+    - OS: Linux (Ubuntu 22.02)
     - Go version: 1.21
 -->
 
