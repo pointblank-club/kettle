@@ -17,13 +17,9 @@ import (
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: `start an existing runc container process`,
+	Long: `Contacts kettle grpc server which inturn calls the respective ttrpc server to run start
+  with the given process for a given existing container.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
 		ctx := cmd.Context() // Get Cobra's context
@@ -52,7 +48,6 @@ to quickly create a Cobra application.`,
 			log.Fatalf("Failed to get id flag: %v", err)
 		}
 		fmt.Println(resp)
-		return
 	},
 }
 
@@ -60,6 +55,7 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 
 	// Here you will define your flags and configuration settings.
+	startCmd.PersistentFlags().String("id", "", "container id")
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:

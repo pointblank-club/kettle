@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func GetTTRPCTaskClient(ctx context.Context) (task.TaskService, error) {
-	socketPath := "/run/kettle/kettle.sock.ttrpc"
+func GetTTRPCTaskClient(ctx context.Context, id string) (task.TaskService, error) {
+	socketPath := "/run/kettle/containers/" + id + "/" + id + ".ttrpc.sock"
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		return nil, err
