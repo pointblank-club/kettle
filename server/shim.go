@@ -8,6 +8,7 @@ import (
 	"os/exec"
 
 	task "kettle/api/shim"
+	pkg "kettle/pkg"
 )
 
 type TaskServiceImpl struct{}
@@ -25,7 +26,7 @@ func runShim(id string) (pid uint32, err error) {
 
 // used by kettle shim to initialize itself
 func StartShim(id string) (pid uint32, err error) {
-	CreateTTRPCServer(context.TODO(), "/run/kettle/containers/"+id+"/"+id+"-ttrpc.sock")
+	CreateTTRPCServer(context.TODO(), pkg.TTRPCSocketPath(id))
 	return pid, nil
 }
 func (s TaskServiceImpl) Start(ctx context.Context, req *task.StartRequest) (*task.StartResponse, error) {
@@ -39,7 +40,7 @@ func (s TaskServiceImpl) Start(ctx context.Context, req *task.StartRequest) (*ta
 
 func (s TaskServiceImpl) Delete(ctx context.Context, req *task.DeleteRequest) (*task.DeleteResponse, error) {
 	log.Printf("Received Delete request for ID: %s\n", req.Id)
-	cmdDelete := exec.Command("runc", "delete", req.Id)
+	cmdDelete := exec.Command("runc", "--root", pkg.RuncRoot, "delete", req.Id)
 	cmdDelete.Stdout = os.Stdout
 	cmdDelete.Stderr = os.Stderr
 	if err := cmdDelete.Run(); err != nil {
@@ -50,7 +51,7 @@ func (s TaskServiceImpl) Delete(ctx context.Context, req *task.DeleteRequest) (*
 }
 
 func startContainer(id string) {
-	cmdStart := exec.Command("runc", "start", id)
+	cmdStart := exec.Command("runc", "--root", pkg.RuncRoot, "start", id)
 	cmdStart.Stdout = os.Stdout
 	cmdStart.Stderr = os.Stderr
 	if err := cmdStart.Run(); err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	containerTask "kettle/api/kettle"
+	pkg "kettle/pkg"
 	"net"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 func GetTTRPCTaskClient(ctx context.Context, id string) (task.TaskService, error) {
-	socketPath := "/run/kettle/containers/" + id + "/" + id + ".ttrpc.sock"
+	socketPath := pkg.TTRPCSocketPath(id)
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		return nil, err

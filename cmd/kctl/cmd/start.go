@@ -43,9 +43,9 @@ var startCmd = &cobra.Command{
 			ContainerId: id,
 		}
 
-		resp, _ := client.Start(clientContext, &req)
+		resp, err := client.Start(clientContext, &req)
 		if err != nil {
-			log.Fatalf("Failed to get id flag: %v", err)
+			log.Fatalf("Failed to start container %s: %v", id, err)
 		}
 		fmt.Println(resp)
 	},
