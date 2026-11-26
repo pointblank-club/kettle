@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	pkg "kettle/pkg"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,64 +38,35 @@ func (s *ContainerTaskServiceImpl) Start(ctx context.Context, req *containerTask
 	return &containerTask.StartResponse{Pid: pid}, nil
 }
 func createContainer(bundlePath, containerID string) error {
-	createBundle(bundlePath)
-	cmdCreate := exec.Command("runc", "--root", "/run/kettle/containers", "create", "--bundle", bundlePath, containerID)
+	if err := createBundle(bundlePath); err != nil {
+		return err
+	}
+	// rootfs must contain the init binary before runc create
+	if err := pkg.InstallBusyBox(filepath.Join(bundlePath, "rootfs")); err != nil {
+		return fmt.Errorf("install busybox: %w", err)
+	}
+	cmdCreate := exec.Command("runc", "--root", pkg.RuncRoot, "create", "--bundle", bundlePath, containerID)
 	cmdCreate.Stdout = os.Stdout
 	cmdCreate.Stderr = os.Stderr
 	if err := cmdCreate.Run(); err != nil {
 		return fmt.Errorf("failed to create container: %w", err)
 	}
-	pkg.InstallBusyBox(bundlePath)
 	fmt.Println("Container created:", containerID)
 	return nil
 }
 
 func createBundle(bundlePath string) error {
-	if err := os.MkdirAll(bundlePath, 0755); err != nil {
-		return fmt.Errorf("failed to create bundle directory: %w", err)
-	}
-	cmd := exec.Command("runc", "spec")
-	cmd.Dir = bundlePath // Set working directory to bundle path
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to generate default spec: %w", err)
-	}
-	if err := os.MkdirAll(bundlePath+"/rootfs", 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(bundlePath, "rootfs"), 0755); err != nil {
 		return fmt.Errorf("failed to create bundle rootfs directory: %w", err)
 	}
-	fmt.Println("Default runc spec created at:", bundlePath+"/config.json")
-
-	return nil
-}
-
-func sstartShim(ctx context.Context, rootDir, id, namespace string) error {
-	log.Printf("Starting shim for container %s in namespace %s", id, namespace)
-
-	// Create a directory for the container
-	containerDir := filepath.Join(rootDir, namespace, id)
-	if err := os.MkdirAll(containerDir, 0755); err != nil {
-		return fmt.Errorf("failed to create container directory: %w", err)
+	configPath := filepath.Join(bundlePath, "config.json")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		cmd := exec.Command("runc", "spec")
+		cmd.Dir = bundlePath // Set working directory to bundle path
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to generate default spec: %w", err)
+		}
+		fmt.Println("Default runc spec created at:", configPath)
 	}
-
-	// Shim socket path
-	shimSocketPath := filepath.Join(containerDir, "shim.sock")
-
-	// Prepare the shim command
-	cmd := exec.CommandContext(ctx, "/run/kettle/kettle.sock.ttrpc",
-		"--namespace", namespace,
-		"--id", id,
-		"--address", shimSocketPath,
-	)
-	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Start the shim process
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start shim process: %w", err)
-	}
-
-	// Don't wait for the process as it should run in the background
-	log.Printf("Shim process started with PID %d", cmd.Process.Pid)
-
 	return nil
 }

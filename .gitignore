@@ -1,0 +1,3 @@
+cmd/kctl/kctl
+cmd/kettle/kettle
+cmd/kettle-shim/kettle-shim
