@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	// Registers the cgroup device controller. Without it, creating a
+	// container with device rules (specconv always adds the defaults) fails
+	// with ErrDevicesUnsupported. runc's main.go imports it the same way.
+	_ "github.com/opencontainers/cgroups/devices"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
