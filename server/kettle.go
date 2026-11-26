@@ -5,7 +5,6 @@ import (
 	"fmt"
 	pkg "kettle/pkg"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	containerTask "kettle/api/kettle"
@@ -41,14 +40,11 @@ func createContainer(bundlePath, containerID string) error {
 	if err := createBundle(bundlePath); err != nil {
 		return err
 	}
-	// rootfs must contain the init binary before runc create
+	// rootfs must contain the init binary before the container is created
 	if err := pkg.InstallBusyBox(filepath.Join(bundlePath, "rootfs")); err != nil {
 		return fmt.Errorf("install busybox: %w", err)
 	}
-	cmdCreate := exec.Command("runc", "--root", pkg.RuncRoot, "create", "--bundle", bundlePath, containerID)
-	cmdCreate.Stdout = os.Stdout
-	cmdCreate.Stderr = os.Stderr
-	if err := cmdCreate.Run(); err != nil {
+	if err := pkg.CreateContainer(bundlePath, containerID); err != nil {
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 	fmt.Println("Container created:", containerID)
@@ -61,9 +57,7 @@ func createBundle(bundlePath string) error {
 	}
 	configPath := filepath.Join(bundlePath, "config.json")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		cmd := exec.Command("runc", "spec")
-		cmd.Dir = bundlePath // Set working directory to bundle path
-		if err := cmd.Run(); err != nil {
+		if err := pkg.WriteDefaultSpec(bundlePath); err != nil {
 			return fmt.Errorf("failed to generate default spec: %w", err)
 		}
 		fmt.Println("Default runc spec created at:", configPath)

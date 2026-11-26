@@ -40,10 +40,7 @@ func (s TaskServiceImpl) Start(ctx context.Context, req *task.StartRequest) (*ta
 
 func (s TaskServiceImpl) Delete(ctx context.Context, req *task.DeleteRequest) (*task.DeleteResponse, error) {
 	log.Printf("Received Delete request for ID: %s\n", req.Id)
-	cmdDelete := exec.Command("runc", "--root", pkg.RuncRoot, "delete", req.Id)
-	cmdDelete.Stdout = os.Stdout
-	cmdDelete.Stderr = os.Stderr
-	if err := cmdDelete.Run(); err != nil {
+	if err := pkg.DeleteContainer(req.Id); err != nil {
 		return nil, fmt.Errorf("failed to delete container: %w", err)
 	}
 
@@ -51,10 +48,8 @@ func (s TaskServiceImpl) Delete(ctx context.Context, req *task.DeleteRequest) (*
 }
 
 func startContainer(id string) {
-	cmdStart := exec.Command("runc", "--root", pkg.RuncRoot, "start", id)
-	cmdStart.Stdout = os.Stdout
-	cmdStart.Stderr = os.Stderr
-	if err := cmdStart.Run(); err != nil {
+	if err := pkg.StartContainer(id); err != nil {
+		log.Printf("failed to start container %s: %v\n", id, err)
 		return
 	}
 	fmt.Println("Started container:", id)
