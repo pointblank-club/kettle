@@ -15,7 +15,8 @@ import (
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start kettle shim",
-	Long:  `Start kettle shim TTRPC server`,
+	Long: `Start the kettle shim for a container in the background and wait until
+its TTRPC server is serving. Exits once the shim is ready.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
 
@@ -27,7 +28,9 @@ var startCmd = &cobra.Command{
 			log.Fatalf("Container ID is required")
 		}
 
-		server.StartShim(id)
+		if err := server.StartShim(id); err != nil {
+			log.Fatalf("Failed to start shim: %v", err)
+		}
 	},
 }
 

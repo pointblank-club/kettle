@@ -4,7 +4,10 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"log"
 	"os"
+
+	server "kettle/server"
 
 	"github.com/spf13/cobra"
 )
@@ -19,9 +22,22 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	// With no subcommand, run as the shim server for --id. This is the
+	// long-running process that `kettle-shim start` launches; like containerd's
+	// shim, server mode is the default rather than a subcommand.
+	Run: func(cmd *cobra.Command, args []string) {
+		id, err := cmd.Flags().GetString("id")
+		if err != nil {
+			log.Fatalf("Failed to get id flag: %v", err)
+		}
+		if id == "" {
+			_ = cmd.Help()
+			return
+		}
+		if err := server.ServeShim(id); err != nil {
+			log.Fatalf("Shim failed: %v", err)
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -43,4 +59,5 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().String("id", "", "container id (runs the shim server for it)")
 }

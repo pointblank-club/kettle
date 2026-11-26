@@ -25,7 +25,8 @@ import (
 // --root RuncRoot.
 //
 // Any binary that calls CreateContainer must handle the "init" re-exec in its
-// main package, see cmd/kettle/main.go.
+// main package (see cmd/kettle-shim/main.go), and should be a child subreaper
+// so that it becomes the parent of the container's init.
 
 // WriteDefaultSpec writes the default OCI spec to <bundlePath>/config.json,
 // equivalent to `runc spec` run inside the bundle directory, but with
@@ -42,14 +43,15 @@ func WriteDefaultSpec(bundlePath string) error {
 
 // CreateContainer is equivalent to `runc --root RuncRoot create --bundle bundlePath id`.
 // The container is left in the created state, waiting for StartContainer.
-func CreateContainer(bundlePath, id string) (retErr error) {
+// It returns the pid of the container's init process.
+func CreateContainer(bundlePath, id string) (pid int, retErr error) {
 	bundlePath, err := filepath.Abs(bundlePath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	spec, err := loadSpec(filepath.Join(bundlePath, "config.json"))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	// kettle has no console socket, so containers always run without a tty.
 	spec.Process.Terminal = false
@@ -63,15 +65,15 @@ func CreateContainer(bundlePath, id string) (retErr error) {
 		RootlessCgroups: rootless,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
 	// specconv labels the bundle with the cwd (runc chdirs into the bundle);
-	// the daemon doesn't, so set it explicitly.
+	// kettle doesn't, so set it explicitly.
 	setBundleLabel(config, bundlePath)
 
 	container, err := libcontainer.Create(RuncRoot, id, config)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer func() {
 		if retErr != nil {
@@ -81,36 +83,49 @@ func CreateContainer(bundlePath, id string) (retErr error) {
 
 	process, err := newProcess(spec.Process)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := container.Start(process); err != nil {
-		return err
+		return 0, err
 	}
-	// runc create detaches and its init gets reparented to PID 1. Here the
-	// init is our child, so reap it when it exits to avoid a zombie.
+	pid, err = process.Pid()
+	if err != nil {
+		return 0, err
+	}
+	// runc init forks the container's init and exits, so the init is
+	// reparented to the nearest child subreaper. When the caller is one (the
+	// shim), the init is its child and must be reaped when it exits.
 	go func() { _, _ = process.Wait() }()
-	return nil
+	return pid, nil
 }
 
 // StartContainer is equivalent to `runc --root RuncRoot start id`.
-func StartContainer(id string) error {
+// It returns the pid of the container's init process.
+func StartContainer(id string) (int, error) {
 	container, err := libcontainer.Load(RuncRoot, id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	status, err := container.Status()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	switch status {
 	case libcontainer.Created:
-		return container.Exec()
+		if err := container.Exec(); err != nil {
+			return 0, err
+		}
+		state, err := container.State()
+		if err != nil {
+			return 0, err
+		}
+		return state.InitProcessPid, nil
 	case libcontainer.Stopped:
-		return errors.New("cannot start a container that has stopped")
+		return 0, errors.New("cannot start a container that has stopped")
 	case libcontainer.Running:
-		return errors.New("cannot start an already running container")
+		return 0, errors.New("cannot start an already running container")
 	default:
-		return fmt.Errorf("cannot start a container in the %s state", status)
+		return 0, fmt.Errorf("cannot start a container in the %s state", status)
 	}
 }
 

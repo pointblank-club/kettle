@@ -12,6 +12,7 @@ option go_package = "./;task";
 // each container and allows reattaching to the IO and receiving the exit status
 // for the container processes.
 service Task {
+	rpc Create(CreateTaskRequest) returns (CreateTaskResponse);
 //	rpc State(StateRequest) returns (StateResponse);
 	rpc Start(StartRequest) returns (StartResponse);
 	rpc Delete(DeleteRequest) returns (DeleteResponse);

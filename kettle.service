@@ -5,6 +5,9 @@ After=network.target local-fs.target dbus.service
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/kettle
+# Stop only the daemon: each container's kettle-shim is its parent and must
+# keep running across daemon restarts.
+KillMode=process
 Restart=always
 
 [Install]

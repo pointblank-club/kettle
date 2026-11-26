@@ -17,7 +17,7 @@ type ContainerTaskServiceImpl struct {
 
 func (s *ContainerTaskServiceImpl) Create(ctx context.Context, req *containerTask.CreateContainerRequest) (*containerTask.CreateContainerResponse, error) {
 	fmt.Println("function create called on grpc")
-	err := createContainer(req.Container.Bundle, req.Container.ID)
+	err := createContainer(ctx, req.Container.Bundle, req.Container.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container: %w", err)
 	}
@@ -26,17 +26,32 @@ func (s *ContainerTaskServiceImpl) Create(ctx context.Context, req *containerTas
 
 func (s *ContainerTaskServiceImpl) Start(ctx context.Context, req *containerTask.StartRequest) (*containerTask.StartResponse, error) {
 	fmt.Println("function start called on grpc")
-	pid, err := runShim(req.ContainerId)
+	if err := pkg.ValidateID(req.ContainerId); err != nil {
+		return nil, err
+	}
+	shim, closeShim, err := dialShim(req.ContainerId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create container: %w", err)
+		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
-	startReq := shimTask.StartRequest{
-		ContainerId: req.ContainerId,
+	defer closeShim()
+	resp, err := shim.Start(ctx, &shimTask.StartRequest{ContainerId: req.ContainerId})
+	if err != nil {
+		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
-	TaskServiceImpl.Start(TaskServiceImpl{}, ctx, &startReq)
-	return &containerTask.StartResponse{Pid: pid}, nil
+	return &containerTask.StartResponse{Pid: resp.Pid}, nil
 }
-func createContainer(bundlePath, containerID string) error {
+
+// createContainer prepares the bundle, then has a new shim create the
+// container so that the shim, not the daemon, is the container's parent.
+func createContainer(ctx context.Context, bundlePath, containerID string) error {
+	if err := pkg.ValidateID(containerID); err != nil {
+		return err
+	}
+	// The shim may run with a different cwd than the client meant.
+	bundlePath, err := filepath.Abs(bundlePath)
+	if err != nil {
+		return err
+	}
 	if err := createBundle(bundlePath); err != nil {
 		return err
 	}
@@ -44,8 +59,17 @@ func createContainer(bundlePath, containerID string) error {
 	if err := pkg.InstallBusyBox(filepath.Join(bundlePath, "rootfs")); err != nil {
 		return fmt.Errorf("install busybox: %w", err)
 	}
-	if err := pkg.CreateContainer(bundlePath, containerID); err != nil {
-		return fmt.Errorf("failed to create container: %w", err)
+
+	if err := launchShim(containerID); err != nil {
+		return err
+	}
+	shim, closeShim, err := dialShim(containerID)
+	if err != nil {
+		return err
+	}
+	defer closeShim()
+	if _, err := shim.Create(ctx, &shimTask.CreateTaskRequest{Id: containerID, Bundle: bundlePath}); err != nil {
+		return err
 	}
 	fmt.Println("Container created:", containerID)
 	return nil

@@ -8,6 +8,7 @@ import (
 )
 
 type TaskService interface {
+	Create(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error)
 	Start(context.Context, *StartRequest) (*StartResponse, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 }
@@ -15,6 +16,13 @@ type TaskService interface {
 func RegisterTaskService(srv *ttrpc.Server, svc TaskService) {
 	srv.RegisterService("task.Task", &ttrpc.ServiceDesc{
 		Methods: map[string]ttrpc.Method{
+			"Create": func(ctx context.Context, unmarshal func(interface{}) error) (interface{}, error) {
+				var req CreateTaskRequest
+				if err := unmarshal(&req); err != nil {
+					return nil, err
+				}
+				return svc.Create(ctx, &req)
+			},
 			"Start": func(ctx context.Context, unmarshal func(interface{}) error) (interface{}, error) {
 				var req StartRequest
 				if err := unmarshal(&req); err != nil {
@@ -41,6 +49,14 @@ func NewTaskClient(client *ttrpc.Client) TaskService {
 	return &taskClient{
 		client: client,
 	}
+}
+
+func (c *taskClient) Create(ctx context.Context, req *CreateTaskRequest) (*CreateTaskResponse, error) {
+	var resp CreateTaskResponse
+	if err := c.client.Call(ctx, "task.Task", "Create", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (c *taskClient) Start(ctx context.Context, req *StartRequest) (*StartResponse, error) {
