@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	containerTask "kettle/api/kettle"
+	pkg "kettle/pkg"
 	"net"
 	"time"
 
@@ -13,8 +14,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func GetTTRPCTaskClient(ctx context.Context) (task.TaskService, error) {
-	socketPath := "/run/kettle/kettle.sock.ttrpc"
+func GetTTRPCTaskClient(ctx context.Context, id string) (task.TaskService, error) {
+	socketPath := pkg.TTRPCSocketPath(id)
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		return nil, err
