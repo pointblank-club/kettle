@@ -33,6 +33,12 @@ func ShimAddressFile(id string) string {
 	return filepath.Join(ShimDir(id), "address")
 }
 
+// ShimPidFile holds the shim server's pid, as containerd's <bundle>/shim.pid
+// does. It is written by `kettle-shim start`.
+func ShimPidFile(id string) string {
+	return filepath.Join(ShimDir(id), "shim.pid")
+}
+
 // TTRPCSocketPath is where the shim for container id listens.
 func TTRPCSocketPath(id string) string {
 	sum := sha256.Sum256([]byte(filepath.Join(ShimRoot, id)))

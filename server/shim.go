@@ -80,9 +80,19 @@ func StartShim(id string) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to launch shim: %w", err)
 	}
-
 	exited := make(chan error, 1)
 	go func() { exited <- cmd.Wait() }()
+
+	// As containerd's shim start does, record the server's pid before
+	// waiting for it. The shim removes its directory, and so this file, when
+	// it exits.
+	if err := writeShimPid(id, cmd.Process.Pid); err != nil {
+		_ = cmd.Process.Kill()
+		<-exited
+		_ = os.RemoveAll(pkg.ShimDir(id))
+		return fmt.Errorf("failed to write shim pid: %w", err)
+	}
+
 	deadline := time.After(shimStartTimeout)
 	for {
 		if conn, err := net.Dial("unix", socket); err == nil {
@@ -91,13 +101,26 @@ func StartShim(id string) error {
 		}
 		select {
 		case err := <-exited:
+			_ = os.RemoveAll(pkg.ShimDir(id))
 			return fmt.Errorf("shim exited before serving: %v", err)
 		case <-deadline:
 			_ = cmd.Process.Kill()
+			<-exited
+			// Killed, so the shim couldn't clean up after itself.
+			_ = os.RemoveAll(pkg.ShimDir(id))
+			_ = os.Remove(socket)
 			return fmt.Errorf("timed out waiting for shim socket %s", socket)
 		case <-time.After(20 * time.Millisecond):
 		}
 	}
+}
+
+func writeShimPid(id string, pid int) error {
+	// The shim creates its directory too; whichever runs first wins.
+	if err := os.MkdirAll(pkg.ShimDir(id), 0o755); err != nil {
+		return err
+	}
+	return pkg.WritePidFile(pkg.ShimPidFile(id), pid)
 }
 
 // ServeShim is `kettle-shim --id <id>`: the long-running shim for container id.
